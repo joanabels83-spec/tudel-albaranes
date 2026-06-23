@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Albaranes — Cafeteria Tudel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { --bg:#f7f6f3;--surface:#fff;--border:#e5e3dc;--border-strong:#ccc9be;--text:#1a1917;--text-muted:#6b6860;--text-hint:#a09e97;--green-bg:#eaf3de;--green-text:#3b6d11;--amber-bg:#faeeda;--amber-text:#854f0b;--red-bg:#fcebeb;--red-text:#a32d2d;--blue-bg:#e6f1fb;--blue-text:#185fa5;--radius:10px;--radius-sm:6px; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
+  .header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:16px;height:56px;position:sticky;top:0;z-index:100;}
+  .header-logo{font-size:16px;font-weight:600;letter-spacing:-0.02em;}
+  .header-logo span{color:var(--text-muted);font-weight:400;}
+  .header-nav{display:flex;gap:2px;margin-left:auto;}
+  .nav-btn{padding:6px 14px;border-radius:var(--radius-sm);border:none;background:none;cursor:pointer;font-size:13px;color:var(--text-muted);font-family:inherit;transition:all 0.15s;}
+  .nav-btn:hover{background:var(--bg);color:var(--text);}
+  .nav-btn.active{background:var(--text);color:white;}
+  .main{max-width:900px;margin:0 auto;padding:24px 16px;}
+  .section{display:none;} .section.active{display:block;}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+  .metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+  .metric-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;}
+  .metric-value{font-size:26px;font-weight:600;letter-spacing:-0.03em;}
+  .metric-sub{font-size:11px;color:var(--text-hint);margin-top:2px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+  .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .card-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .form-group{display:flex;flex-direction:column;gap:4px;}
+  .form-group.full{grid-column:1/-1;}
+  label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);}
+  input,select,textarea{font-family:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);transition:border 0.15s;width:100%;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--text);background:white;}
+  textarea{resize:vertical;min-height:64px;}
+  .btn{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;}
+  .btn:hover{background:var(--bg);}
+  .btn-primary{background:var(--text);color:white;border-color:transparent;}
+  .btn-primary:hover{opacity:0.85;background:var(--text);}
+  .btn-ai{background:#4f46e5;color:white;border-color:transparent;font-size:14px;padding:10px 20px;width:100%;justify-content:center;}
+  .btn-ai:hover{background:#4338ca;}
+  .btn-ai:disabled{background:#a5b4fc;cursor:not-allowed;}
+  .btn-danger{color:var(--red-text);border-color:#f0c0c0;}
+  .btn-danger:hover{background:var(--red-bg);}
+  .btn-sm{padding:4px 10px;font-size:12px;}
+  .btn-group{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+  table{width:100%;border-collapse:collapse;}
+  th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+  td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:var(--bg);}
+  .td-actions{display:flex;gap:4px;}
+  .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;}
+  .badge-ok{background:var(--green-bg);color:var(--green-text);}
+  .badge-warn{background:var(--amber-bg);color:var(--amber-text);}
+  .badge-info{background:var(--blue-bg);color:var(--blue-text);}
+  .empty-state{text-align:center;padding:48px 16px;color:var(--text-hint);}
+  .alert{padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:16px;display:none;}
+  .alert.show{display:flex;align-items:center;gap:8px;}
+  .alert-ok{background:var(--green-bg);color:var(--green-text);border:1px solid #b8dba0;}
+  .alert-err{background:var(--red-bg);color:var(--red-text);border:1px solid #f0c0c0;}
+  .lineas-header{display:grid;grid-template-columns:2.5fr 1fr 80px 100px 36px;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:8px;}
+  .lineas-header span{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);}
+  .linea-row{display:grid;grid-template-columns:2.5fr 1fr 80px 100px 36px;gap:8px;margin-bottom:6px;align-items:center;}
+  .linea-row input,.linea-row select{font-size:13px;padding:6px 8px;}
+  .total-bar{display:flex;justify-content:flex-end;gap:12px;align-items:baseline;padding:12px 0 0;border-top:1px solid var(--border);margin-top:8px;}
+  .total-label{font-size:13px;color:var(--text-muted);}
+  .total-value{font-size:20px;font-weight:600;letter-spacing:-0.02em;}
+  .filter-bar{display:flex;gap:8px;margin-bottom:16px;}
+  .filter-bar input{flex:1;}
+  .ai-zone{border:2px dashed #4f46e5;border-radius:var(--radius);padding:28px 20px;text-align:center;background:#f5f3ff;margin-bottom:16px;}
+  .ai-zone-title{font-size:15px;font-weight:600;color:#4f46e5;margin-bottom:4px;}
+  .ai-zone-sub{font-size:13px;color:var(--text-muted);margin-bottom:16px;}
+  .ai-preview{max-width:100%;max-height:220px;border-radius:var(--radius-sm);margin:12px auto 16px;display:none;object-fit:contain;}
+  .ai-status{font-size:13px;color:#4f46e5;margin-top:10px;min-height:20px;font-weight:500;}
+  #ai-file-input{display:none;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--text-hint);font-size:12px;}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+  .detalle-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;position:relative;}
+  .detalle-close{position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;}
+  .detalle-img{max-width:100%;border-radius:var(--radius-sm);margin-top:12px;max-height:300px;object-fit:contain;display:block;}
+  @media(max-width:600px){.metrics{grid-template-columns:1fr 1fr;}.form-grid{grid-template-columns:1fr;}.form-group.full{grid-column:1;}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-logo">Tudel <span>· Albaranes</span></div>
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="showTab('dashboard')">Resumen</button>
+    <button class="nav-btn" onclick="showTab('nuevo')">+ Nuevo</button>
+    <button class="nav-btn" onclick="showTab('historial')">Historial</button>
+    <button class="nav-btn" onclick="showTab('proveedores')">Proveedores</button>
+  </nav>
+</div>
+<div class="main">
+  <div id="alert-zone"></div>
+  <div id="tab-dashboard" class="section active">
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Albaranes este mes</div><div class="metric-value" id="m-mes">—</div><div class="metric-sub" id="m-mes-sub">cargando...</div></div>
+      <div class="metric"><div class="metric-label">Importe total mes</div><div class="metric-value" id="m-importe">—</div><div class="metric-sub">euros</div></div>
+      <div class="metric"><div class="metric-label">Pendientes confirmar</div><div class="metric-value" id="m-pendientes">—</div><div class="metric-sub">sin confirmar</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Últimos albaranes</span><button class="btn btn-sm" onclick="showTab('historial')">Ver todos</button></div>
+      <table><thead><tr><th>Nº albarán</th><th>Proveedor</th><th>Fecha</th><th>Total</th><th>Estado</th></tr></thead><tbody id="dash-tabla"></tbody></table>
+      <div id="dash-empty" class="empty-state" style="display:none;">Sin albaranes aún.</div>
+    </div>
+  </div>
+  <div id="tab-nuevo" class="section">
+    <div class="card">
+      <div class="card-header"><span class="card-title" id="form-titulo">Nuevo albarán</span><button class="btn btn-sm" onclick="cancelar()">Cancelar</button></div>
+      <div class="ai-zone">
+        <div class="ai-zone-title">✨ Leer albarán con IA</div>
+        <div class="ai-zone-sub">Sube la foto y la IA rellena el formulario automáticamente</div>
+        <input type="file" id="ai-file-input" accept="image/*" onchange="handleAIFile(this)" />
+        <button class="btn btn-ai" id="btn-subir-foto" onclick="document.getElementById('ai-file-input').click()">📷 Seleccionar foto del albarán</button>
+        <img id="ai-preview" class="ai-preview" />
+        <div class="ai-status" id="ai-status"></div>
+      </div>
+      <div class="divider">o rellena manualmente</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Nº albarán *</label><input type="text" id="f-num" placeholder="Ej: 2024-001" /></div>
+        <div class="form-group"><label>Fecha recepción *</label><input type="date" id="f-fecha" /></div>
+        <div class="form-group"><label>Proveedor *</label><select id="f-proveedor"><option value="">— Seleccionar —</option></select></div>
+        <div class="form-group"><label>Recibido por *</label><input type="text" id="f-recibido" placeholder="Nombre del empleado" /></div>
+        <div class="form-group full"><label>Observaciones</label><textarea id="f-obs" placeholder="Incidencias, notas..."></textarea></div>
+      </div>
+      <div style="margin-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span style="font-size:13px;font-weight:600;">Líneas de producto</span><button class="btn btn-sm" onclick="addLinea()">+ Añadir línea</button></div>
+        <div class="lineas-header"><span>Producto</span><span>Cantidad</span><span>Unidad</span><span>P. unitario</span><span></span></div>
+        <div id="lineas-container"></div>
+        <div class="total-bar"><span class="total-label">Total albarán:</span><span class="total-value" id="total-display">0,00 €</span></div>
+      </div>
+      <div class="btn-group">
+        <button class="btn" onclick="guardar('pendiente')">Guardar pendiente</button>
+        <button class="btn btn-primary" onclick="guardar('confirmado')"><span id="btn-confirmar-text">✓ Confirmar albarán</span></button>
+      </div>
+    </div>
+  </div>
+  <div id="tab-historial" class="section">
+    <div class="filter-bar">
+      <input type="text" id="filtro-texto" placeholder="Buscar..." oninput="renderHistorial()" />
+      <select id="filtro-estado" onchange="renderHistorial()" style="width:160px;"><option value="">Todos</option><option value="confirmado">Confirmados</option><option value="pendiente">Pendientes</option></select>
+    </div>
+    <div id="detalle-zone"></div>
+    <div class="card">
+      <table><thead><tr><th>Nº albarán</th><th>Proveedor</th><th>Fecha</th><th>Recibido por</th><th>Total</th><th>Estado</th><th></th></tr></thead><tbody id="historial-tabla"></tbody></table>
+      <div id="historial-empty" class="empty-state" style="display:none;">No hay albaranes.</div>
+    </div>
+  </div>
+  <div id="tab-proveedores" class="section">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Añadir proveedor</span></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Nombre *</label><input type="text" id="p-nombre" placeholder="Nombre" /></div>
+        <div class="form-group"><label>Categoría</label><select id="p-cat"><option value="alimentación">Alimentación</option><option value="bebidas">Bebidas</option><option value="lácteos">Lácteos</option><option value="bollería">Bollería</option><option value="higiene">Higiene</option><option value="otros">Otros</option></select></div>
+        <div class="form-group"><label>Contacto</label><input type="text" id="p-contacto" placeholder="Nombre comercial" /></div>
+        <div class="form-group"><label>Teléfono</label><input type="text" id="p-tel" /></div>
+        <div class="form-group"><label>Día de entrega</label><select id="p-dia"><option value="lunes">Lunes</option><option value="martes">Martes</option><option value="miércoles">Miércoles</option><option value="jueves">Jueves</option><option value="viernes">Viernes</option><option value="variable">Variable</option></select></div>
+        <div class="form-group"><label>NIF / CIF</label><input type="text" id="p-nif" /></div>
+      </div>
+      <div class="btn-group"><button class="btn btn-primary" onclick="guardarProveedor()">+ Añadir proveedor</button></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Proveedores registrados</span></div>
+      <table><thead><tr><th>Proveedor</th><th>Categoría</th><th>Contacto</th><th>Teléfono</th><th>Día</th><th></th></tr></thead><tbody id="prov-tabla"></tbody></table>
+      <div id="prov-empty" class="empty-state" style="display:none;">Añade tu primer proveedor.</div>
+    </div>
+  </div>
+</div>
+<script>
+const SUPABASE_URL='https://zebokhbwyvlcuqupnogy.supabase.co';
+const SUPABASE_KEY='sb_publishable_i8NhXFmZJ5ItFrmS8rruZQ_x7UWxdjV';
+const{createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_KEY);
+let albaranes=[],proveedores=[],lineas=[],editandoId=null,fotoBase64=null,fotoMime=null;
+
+async function init(){await cargarProveedores();await cargarAlbaranes();renderDashboard();initForm();}
+async function cargarAlbaranes(){const{data}=await db.from('albaranes').select('*').order('creado_en',{ascending:false});albaranes=data||[];}
+async function cargarProveedores(){const{data}=await db.from('proveedores').select('*').order('nombre');proveedores=data||[];actualizarSelectProv();}
+function actualizarSelectProv(){const sel=document.getElementById('f-proveedor');const val=sel.value;sel.innerHTML='<option value="">— Seleccionar —</option>'+proveedores.map(p=>`<option value="${p.nombre}">${p.nombre}</option>`).join('');if(val)sel.value=val;}
+function showTab(tab){document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','nuevo','historial','proveedores'][i]===tab));document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById('tab-'+tab).classList.add('active');if(tab==='dashboard')renderDashboard();if(tab==='historial')renderHistorial();if(tab==='proveedores')renderProveedores();if(tab==='nuevo'&&!editandoId)initForm();}
+function initForm(){editandoId=null;fotoBase64=null;fotoMime=null;document.getElementById('form-titulo').textContent='Nuevo albarán';document.getElementById('f-num').value='';document.getElementById('f-fecha').value=new Date().toISOString().split('T')[0];document.getElementById('f-proveedor').value='';document.getElementById('f-recibido').value='';document.getElementById('f-obs').value='';document.getElementById('ai-preview').style.display='none';document.getElementById('ai-status').textContent='';document.getElementById('btn-subir-foto').textContent='📷 Seleccionar foto del albarán';document.getElementById('ai-file-input').value='';lineas=[{producto:'',cantidad:'',unidad:'ud',precio:''}];renderLineas();}
+function cancelar(){editandoId=null;initForm();showTab('historial');}
+
+async function handleAIFile(input){
+  const file=input.files[0];if(!file)return;
+  const preview=document.getElementById('ai-preview');
+  const status=document.getElementById('ai-status');
+  const btn=document.getElementById('btn-subir-foto');
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    const base64=e.target.result.split(',')[1];
+    fotoBase64=base64;fotoMime=file.type;
+    preview.src=e.target.result;preview.style.display='block';
+    btn.innerHTML='<span class="spinner"></span> Analizando...';btn.disabled=true;
+    status.textContent='🔍 La IA está leyendo el albarán...';
+    try{
+      const res=await fetch('/.netlify/functions/leer-albaran',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64,mimeType:file.type})});
+      if(!res.ok)throw new Error('Error '+res.status);
+      const datos=await res.json();
+      rellenarFormulario(datos);
+      status.textContent='✅ Formulario rellenado. Revisa y confirma.';
+      btn.textContent='📷 Cambiar foto';btn.disabled=false;
+    }catch(err){
+      status.textContent='⚠️ No se pudo leer. Rellena manualmente.';
+      btn.textContent='📷 Reintentar';btn.disabled=false;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function rellenarFormulario(d){
+  if(d.num)document.getElementById('f-num').value=d.num;
+  if(d.fecha)document.getElementById('f-fecha').value=d.fecha;
+  if(d.observaciones)document.getElementById('f-obs').value=d.observaciones;
+  if(d.proveedor){const p=proveedores.find(x=>x.nombre.toLowerCase().includes(d.proveedor.toLowerCase())||d.proveedor.toLowerCase().includes(x.nombre.toLowerCase()));if(p)document.getElementById('f-proveedor').value=p.nombre;}
+  if(d.lineas&&d.lineas.length>0){lineas=d.lineas.map(l=>({producto:l.producto||'',cantidad:l.cantidad||'',unidad:l.unidad||'ud',precio:l.precio||''}));renderLineas();}
+}
+
+function addLinea(){lineas.push({producto:'',cantidad:'',unidad:'ud',precio:''});renderLineas();}
+function removeLinea(i){if(lineas.length===1)return;lineas.splice(i,1);renderLineas();}
+function renderLineas(){document.getElementById('lineas-container').innerHTML=lineas.map((l,i)=>`<div class="linea-row"><input type="text" value="${l.producto||''}" placeholder="Producto" oninput="lineas[${i}].producto=this.value"/><input type="number" value="${l.cantidad||''}" placeholder="0" min="0" step="0.001" oninput="lineas[${i}].cantidad=this.value;calcTotal()"/><select onchange="lineas[${i}].unidad=this.value">${['ud','kg','g','l','ml','caja','bolsa','botella','pack'].map(u=>`<option value="${u}"${l.unidad===u?' selected':''}>${u}</option>`).join('')}</select><input type="number" value="${l.precio||''}" placeholder="0.00" min="0" step="0.01" oninput="lineas[${i}].precio=this.value;calcTotal()"/><button class="btn btn-sm btn-danger" onclick="removeLinea(${i})">✕</button></div>`).join('');calcTotal();}
+function calcTotal(){const t=lineas.reduce((s,l)=>s+(parseFloat(l.cantidad)||0)*(parseFloat(l.precio)||0),0);document.getElementById('total-display').textContent=t.toFixed(2).replace('.',',')+'  €';return t;}
+
+async function guardar(estado){
+  const num=document.getElementById('f-num').value.trim();
+  const fecha=document.getElementById('f-fecha').value;
+  const prov=document.getElementById('f-proveedor').value;
+  const recibido=document.getElementById('f-recibido').value.trim();
+  if(!num||!fecha||!prov||!recibido){showAlert('Rellena: nº albarán, fecha, proveedor y recibido por.','err');return;}
+  document.getElementById('btn-confirmar-text').innerHTML='<span class="spinner"></span> Guardando...';
+  let imagen_url=null;
+  if(fotoBase64&&fotoMime){const blob=b64toBlob(fotoBase64,fotoMime);const ext=fotoMime.split('/')[1]||'jpg';const path=`albaranes/${Date.now()}.${ext}`;const{error:upErr}=await db.storage.from('fotos').upload(path,blob);if(!upErr){const{data:urlData}=db.storage.from('fotos').getPublicUrl(path);imagen_url=urlData.publicUrl;}}
+  const total=calcTotal();
+  const payload={num,fecha,proveedor:prov,recibido_por:recibido,observaciones:document.getElementById('f-obs').value.trim(),lineas:JSON.stringify(lineas),total,estado,imagen_url};
+  let error;
+  if(editandoId){({error}=await db.from('albaranes').update(payload).eq('id',editandoId));}else{({error}=await db.from('albaranes').insert([payload]));}
+  document.getElementById('btn-confirmar-text').textContent='✓ Confirmar albarán';
+  if(error){showAlert('Error: '+error.message,'err');return;}
+  showAlert(`Albarán ${num} ${estado==='confirmado'?'confirmado':'guardado'}.`,'ok');
+  editandoId=null;await cargarAlbaranes();initForm();showTab('historial');
+}
+
+function b64toBlob(b64,mime){const bytes=atob(b64);const arr=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);return new Blob([arr],{type:mime});}
+async function eliminar(id){if(!confirm('¿Eliminar?'))return;await db.from('albaranes').delete().eq('id',id);await cargarAlbaranes();renderHistorial();renderDashboard();showAlert('Eliminado.','ok');}
+async function confirmarAlbaran(id){await db.from('albaranes').update({estado:'confirmado'}).eq('id',id);await cargarAlbaranes();renderHistorial();renderDashboard();showAlert('Confirmado.','ok');}
+function editar(id){const a=albaranes.find(x=>x.id===id);if(!a)return;editandoId=id;showTab('nuevo');document.getElementById('form-titulo').textContent='Editar albarán';document.getElementById('f-num').value=a.num;document.getElementById('f-fecha').value=a.fecha;document.getElementById('f-proveedor').value=a.proveedor;document.getElementById('f-recibido').value=a.recibido_por;document.getElementById('f-obs').value=a.observaciones||'';lineas=typeof a.lineas==='string'?JSON.parse(a.lineas):(a.lineas||[{producto:'',cantidad:'',unidad:'ud',precio:''}]);renderLineas();}
+function verDetalle(id){const a=albaranes.find(x=>x.id===id);if(!a)return;const lins=typeof a.lineas==='string'?JSON.parse(a.lineas):(a.lineas||[]);document.getElementById('detalle-zone').innerHTML=`<div class="detalle-modal"><button class="detalle-close" onclick="document.getElementById('detalle-zone').innerHTML=''">✕</button><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;"><div><div style="font-size:16px;font-weight:600;">${a.num}</div><div style="font-size:12px;color:#6b6860;">${a.proveedor} · ${fmt(a.fecha)} · ${a.recibido_por}</div></div><span class="badge ${a.estado==='confirmado'?'badge-ok':'badge-warn'}" style="margin-left:auto;">${a.estado==='confirmado'?'Confirmado':'Pendiente'}</span></div>${a.observaciones?`<div style="font-size:13px;background:#f7f6f3;padding:8px 12px;border-radius:6px;margin-bottom:12px;color:#6b6860;">📝 ${a.observaciones}</div>`:''}<table><thead><tr><th>Producto</th><th>Cantidad</th><th>P. unitario</th><th style="text-align:right;">Subtotal</th></tr></thead><tbody>${lins.map(l=>`<tr><td>${l.producto||'—'}</td><td>${l.cantidad} ${l.unidad}</td><td>${parseFloat(l.precio||0).toFixed(2)} €</td><td style="text-align:right;">${((parseFloat(l.cantidad)||0)*(parseFloat(l.precio)||0)).toFixed(2)} €</td></tr>`).join('')}</tbody></table><div style="display:flex;justify-content:flex-end;padding-top:10px;font-weight:600;font-size:16px;">Total: ${parseFloat(a.total||0).toFixed(2).replace('.',',')} €</div>${a.imagen_url?`<img src="${a.imagen_url}" class="detalle-img" />`:'</div>'}`;}
+function renderDashboard(){const mes=new Date().toISOString().slice(0,7);const delMes=albaranes.filter(a=>a.fecha&&a.fecha.startsWith(mes));const importe=delMes.reduce((s,a)=>s+parseFloat(a.total||0),0);const pend=albaranes.filter(a=>a.estado==='pendiente').length;document.getElementById('m-mes').textContent=delMes.length;document.getElementById('m-mes-sub').textContent=delMes.length===1?'albarán':'albaranes';document.getElementById('m-importe').textContent=importe.toFixed(2).replace('.',',')+' €';document.getElementById('m-pendientes').textContent=pend;const ultimos=albaranes.slice(0,6);const tb=document.getElementById('dash-tabla');const em=document.getElementById('dash-empty');if(!ultimos.length){tb.innerHTML='';em.style.display='block';return;}em.style.display='none';tb.innerHTML=ultimos.map(a=>`<tr><td style="font-weight:500;">${a.num}</td><td>${a.proveedor}</td><td>${fmt(a.fecha)}</td><td>${parseFloat(a.total||0).toFixed(2).replace('.',',')} €</td><td><span class="badge ${a.estado==='confirmado'?'badge-ok':'badge-warn'}">${a.estado==='confirmado'?'Confirmado':'Pendiente'}</span></td></tr>`).join('');}
+function renderHistorial(){const txt=(document.getElementById('filtro-texto')||{}).value?.toLowerCase()||'';const est=(document.getElementById('filtro-estado')||{}).value||'';const f=albaranes.filter(a=>(!txt||a.num?.toLowerCase().includes(txt)||a.proveedor?.toLowerCase().includes(txt)||a.recibido_por?.toLowerCase().includes(txt))&&(!est||a.estado===est));const tb=document.getElementById('historial-tabla');const em=document.getElementById('historial-empty');if(!f.length){tb.innerHTML='';em.style.display='block';return;}em.style.display='none';tb.innerHTML=f.map(a=>`<tr><td style="font-weight:500;">${a.num}</td><td>${a.proveedor}</td><td>${fmt(a.fecha)}</td><td>${a.recibido_por}</td><td>${parseFloat(a.total||0).toFixed(2).replace('.',',')} €</td><td><span class="badge ${a.estado==='confirmado'?'badge-ok':'badge-warn'}">${a.estado==='confirmado'?'Confirmado':'Pendiente'}</span></td><td><div class="td-actions"><button class="btn btn-sm" onclick="verDetalle(${a.id})">👁</button><button class="btn btn-sm" onclick="editar(${a.id})">✏️</button>${a.estado==='pendiente'?`<button class="btn btn-sm" onclick="confirmarAlbaran(${a.id})">✓</button>`:''}<button class="btn btn-sm btn-danger" onclick="eliminar(${a.id})">✕</button></div></td></tr>`).join('');}
+async function guardarProveedor(){const nombre=document.getElementById('p-nombre').value.trim();if(!nombre){showAlert('El nombre es obligatorio.','err');return;}const{error}=await db.from('proveedores').insert([{nombre,categoria:document.getElementById('p-cat').value,contacto:document.getElementById('p-contacto').value.trim(),telefono:document.getElementById('p-tel').value.trim(),dia_entrega:document.getElementById('p-dia').value,nif:document.getElementById('p-nif').value.trim()}]);if(error){showAlert('Error: '+error.message,'err');return;}await cargarProveedores();renderProveedores();['p-nombre','p-contacto','p-tel','p-nif'].forEach(id=>document.getElementById(id).value='');showAlert(`Proveedor "${nombre}" añadido.`,'ok');}
+async function eliminarProv(id){if(!confirm('¿Eliminar?'))return;await db.from('proveedores').delete().eq('id',id);await cargarProveedores();renderProveedores();}
+function renderProveedores(){const tb=document.getElementById('prov-tabla');const em=document.getElementById('prov-empty');if(!proveedores.length){tb.innerHTML='';em.style.display='block';return;}em.style.display='none';tb.innerHTML=proveedores.map(p=>`<tr><td style="font-weight:500;">${p.nombre}</td><td><span class="badge badge-info">${p.categoria||'—'}</span></td><td>${p.contacto||'—'}</td><td>${p.telefono||'—'}</td><td style="text-transform:capitalize;">${p.dia_entrega||'—'}</td><td><button class="btn btn-sm btn-danger" onclick="eliminarProv(${p.id})">✕</button></td></tr>`).join('');}
+function fmt(f){if(!f)return'—';const[y,m,d]=f.split('-');return`${d}/${m}/${y}`;}
+function showAlert(msg,tipo){const z=document.getElementById('alert-zone');z.innerHTML=`<div class="alert ${tipo==='ok'?'alert-ok':'alert-err'} show">${tipo==='ok'?'✓':'✕'} ${msg}</div>`;setTimeout(()=>z.innerHTML='',4000);}
+init();
+</script>
+</body>
+</html>
